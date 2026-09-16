@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1297e8">
+<title>Tara's 30-Day Fitness Challenge</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:#f4f7fb;color:#202124;
+    font-family:"Trebuchet MS",Arial,sans-serif;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:18px 14px 50px}
+  .hero,.info,.day{
+    background:#fff;border-radius:28px;padding:25px;
+    box-shadow:0 8px 28px rgba(30,70,110,.08);margin-bottom:18px;
+  }
+  h1{font-size:31px;line-height:1.12;margin:0 0 10px;font-weight:800}
+  .dates{font-size:19px;color:#707783;margin-bottom:25px}
+  .progress-row{display:flex;align-items:center;gap:14px}
+  .bar{height:18px;background:#e6ebf1;border-radius:99px;overflow:hidden;flex:1}
+  .fill{height:100%;width:0%;background:#1297e8;border-radius:99px;transition:width .35s ease}
+  .pct{font-size:30px;font-weight:900;min-width:66px;text-align:right}
+  .stats{display:flex;justify-content:space-between;color:#69717c;font-size:17px;margin-top:14px}
+  .info h2{font-size:23px;margin:0 0 10px}
+  .targets{font-size:18px;line-height:1.8;color:#626a75}
+  .day{padding:22px 24px}
+  .day.complete{outline:3px solid #1297e8}
+  .day-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:15px}
+  .day-title{font-size:25px;font-weight:800}
+  .date{color:#69717c;font-size:17px}
+  .task{
+    display:flex;align-items:center;gap:15px;
+    min-height:67px;cursor:pointer;user-select:none;
+  }
+  .task input{
+    position:absolute;opacity:0;width:1px;height:1px;
+  }
+  .box{
+    width:38px;height:38px;border:2px solid #777;border-radius:5px;
+    display:grid;place-items:center;flex:0 0 38px;background:#fff;
+    transition:.15s;
+  }
+  .box::after{content:"✓";font-size:28px;color:white;font-weight:900;opacity:0}
+  .task input:checked + .box{background:#1297e8;border-color:#1297e8}
+  .task input:checked + .box::after{opacity:1}
+  .task input:focus-visible + .box{outline:3px solid #8fd3ff;outline-offset:2px}
+  .label{font-size:19px}
+  .task input:checked ~ .label{text-decoration:line-through;color:#8a8f96}
+  .day-footer{text-align:center;color:#727984;font-size:16px;margin-top:8px}
+  .toast-wrap{
+    position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.42);z-index:100;padding:18px;
+  }
+  .toast-wrap.show{display:flex}
+  .popup{
+    width:min(520px,100%);background:white;border-radius:30px;
+    padding:32px 25px;text-align:center;box-shadow:0 20px 70px rgba(0,0,0,.25);
+    animation:pop .25s ease;
+  }
+  @keyframes pop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+  .celebrate{font-size:45px;margin-bottom:8px}
+  .popup h2{font-size:30px;margin:5px 0 10px}
+  .popup p{font-size:18px;color:#68717d;margin:8px 0 20px}
+  button{
+    border:0;background:#1297e8;color:white;border-radius:16px;
+    padding:14px 30px;font-size:18px;font-weight:800;cursor:pointer;
+  }
+  .reset{
+    display:block;margin:28px auto 0;background:transparent;color:#7b838d;
+    font-size:14px;padding:8px;
+  }
+  @media(max-width:500px){
+    .wrap{padding:14px 10px 40px}
+    .hero,.info,.day{border-radius:24px;padding:21px 19px}
+    h1{font-size:29px}
+    .pct{font-size:27px;min-width:58px}
+    .stats{font-size:15px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <h1>🔥 Tara's 30-Day Fitness Challenge</h1>
+    <div class="dates">September 16 — October 15, 2026</div>
+    <div class="progress-row">
+      <div class="bar"><div id="fill" class="fill"></div></div>
+      <div id="pct" class="pct">0%</div>
+    </div>
+    <div class="stats">
+      <span id="taskCount">0 / 120 tasks</span>
+      <span id="dayCount">0 / 30 days</span>
+    </div>
+  </section>
+
+  <section class="info">
+    <h2>❤️ Tara's daily targets</h2>
+    <div class="targets">
+      🚫 No added sugar &nbsp; • &nbsp;
+      🚶 3 km walk &nbsp; • &nbsp;
+      💪 Workout &nbsp; • &nbsp;
+      🥗 Followed diet
+    </div>
+  </section>
+
+  <main id="days"></main>
+  <button class="reset" onclick="resetChallenge()">Reset all progress</button>
+</div>
+
+<div id="modal" class="toast-wrap" aria-hidden="true">
+  <div class="popup">
+    <div class="celebrate">🎉✨💪</div>
+    <h2 id="modalTitle">WOW! Day 1 Complete! 🥳</h2>
+    <p id="modalText">You completed all 4 targets today!</p>
+    <p>🔥 Keep this streak going — you're doing amazing!</p>
+    <button id="gotIt">Got it ❤️</button>
+  </div>
+</div>
+
+<script>
+const START = new Date(2026, 8, 16); // Sep 16, 2026
+const DAYS = 30;
+const TASKS = [
+  ["🚫","No added sugar"],
+  ["🚶","3 km walk"],
+  ["💪","Workout"],
+  ["🥗","Followed diet"]
+];
+const KEY = "taraFitness30DayProgressV1";
+let state = JSON.parse(localStorage.getItem(KEY) || "null");
+if (!Array.isArray(state) || state.length !== DAYS || state.some(d => !Array.isArray(d) || d.length !== 4)) {
+  state = Array.from({length:DAYS}, () => [false,false,false,false]);
+}
+
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+
+function dateText(i){
+  const d = new Date(START);
+  d.setDate(d.getDate()+i);
+  return d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+}
+
+function render(){
+  const days = document.getElementById("days");
+  days.innerHTML = "";
+  let completedTasks = 0, completedDays = 0;
+
+  for(let i=0;i<DAYS;i++){
+    const done = state[i].filter(Boolean).length;
+    completedTasks += done;
+    if(done === 4) completedDays++;
+
+    const card = document.createElement("section");
+    card.className = "day" + (done===4 ? " complete" : "");
+    card.innerHTML = `
+      <div class="day-head">
+        <div class="day-title">Day ${i+1}</div>
+        <div class="date">${dateText(i)}</div>
+      </div>
+      ${TASKS.map((t,j)=>`
+        <label class="task">
+          <input type="checkbox" data-day="${i}" data-task="${j}" ${state[i][j] ? "checked":""}>
+          <span class="box"></span>
+          <span class="label">${t[0]} ${t[1]}</span>
+        </label>
+      `).join("")}
+      <div class="day-footer" id="footer-${i}">
+        ${done===4 ? "🎉 Day complete! Great job, Tara! ❤️" : `${done} / 4 completed`}
+      </div>
+    `;
+    days.appendChild(card);
+  }
+
+  const total = DAYS * TASKS.length;
+  const percentage = Math.round((completedTasks / total) * 100);
+  document.getElementById("fill").style.width = percentage + "%";
+  document.getElementById("pct").textContent = percentage + "%";
+  document.getElementById("taskCount").textContent = `${completedTasks} / ${total} tasks`;
+  document.getElementById("dayCount").textContent = `${completedDays} / ${DAYS} days`;
+
+  document.querySelectorAll("input[type=checkbox]").forEach(cb=>{
+    cb.addEventListener("change", onCheck);
+  });
+}
+
+function onCheck(e){
+  const day = Number(e.target.dataset.day);
+  const task = Number(e.target.dataset.task);
+  const wasComplete = state[day].every(Boolean);
+  state[day][task] = e.target.checked;
+  save();
+  render();
+
+  const nowComplete = state[day].every(Boolean);
+  if(nowComplete && !wasComplete){
+    showPopup(day+1);
+  }
+}
+
+function showPopup(day){
+  document.getElementById("modalTitle").textContent = `WOW! Day ${day} Complete! 🥳`;
+  document.getElementById("modalText").textContent = "You completed all 4 targets today!";
+  const modal = document.getElementById("modal");
+  modal.classList.add("show");
+  modal.setAttribute("aria-hidden","false");
+}
+
+function closePopup(){
+  const modal = document.getElementById("modal");
+  modal.classList.remove("show");
+  modal.setAttribute("aria-hidden","true");
+}
+
+document.getElementById("gotIt").addEventListener("click", closePopup);
+document.getElementById("modal").addEventListener("click", e=>{
+  if(e.target.id === "modal") closePopup();
+});
+
+function resetChallenge(){
+  if(confirm("Reset all Tara's challenge progress?")){
+    state = Array.from({length:DAYS}, () => [false,false,false,false]);
+    save(); render();
+  }
+}
+
+render();
+</script>
+</body>
+</html>
